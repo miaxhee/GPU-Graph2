@@ -127,8 +127,11 @@ function runLayout(implementation, graph) {
 
 	
 	var opt = {
-		dimensions:  [graflength, graflength], //[341, 341], //[121, 121], //[85, 85] ,  //[graf_length,graf_length,graf_length],   // ???? define graph.length  ???????????
-		mode: 'gpu'    // or cpu
+		output: [graflength, graflength],
+		mode: 'gpu'
+		//old gpu.js syntax was ...
+		//dimensions:  [graflength, graflength], //[341, 341], //[121, 121], //[85, 85] ,  //[graf_length,graf_length,graf_length],   // ???? define graph.length  ???????????
+		//mode: 'gpu'    // or cpu
 	};
 
 
