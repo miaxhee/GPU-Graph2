@@ -27,29 +27,101 @@ function treeGraph(depth, branches) {
   return graph;
 }
 
-var springLength = 40;
-var springStrength = 0.1;
+var springLength = 40;    //40
+var springStrength = 0.1;  //0.1
 
-var repulsionStrength = 1500;
+var repulsionStrength = 1500;    //1500
 
-var graflength = 1500
+var graflength = 400  //1500               //hier muss man die Anzahl Knoten einstellen
 
 
-function runLayout(implementation, graph) {
+function runLayout(implementation, graph) {         
+
+
+    //???????graph is global in this function, make graf and has_edge global as well so wie graflength
 	
 	graflength = graph.length
 
 	alert(graflength)
+
+
+	  //initialize an empty array of the size #knoten * x,y werte for the input values
+	  var graf = [];
+	  for (var a = 0; a < graph.length; a++){
+		graf[a] = [];
+		for (var b = 0; b < 2; b++){
+		  graf[a][b] = 0;
+		}
+	  }
+
+	  
+	  
+	  
+	  //initialize an empty array #knoten^2 for the has edge values
+	  var has_edge = [];
+	  for (var a = 0; a < graph.length; a++){
+		has_edge[a] = [];
+		for (var b = 0; b < graph.length; b++){
+		  has_edge[a][b] = 0;
+		}
+	  }
+
+
+
+	  //initialize an empty array for the gpu-return values of the size #knoten * x,y werte for the input values
+	  var ret_graf = [];
+	  for (var a = 0; a < graph.length; a++){
+		ret_graf[a] = [];
+		for (var b = 0; b < 2; b++){
+		  ret_graf[a][b] = 0;
+		}
+	  }
+	  
+	  
+
+	//copy graph-object values to graf-array
+	for (var i = 0; i < graph.length; i++) {
+		graf[i][0] = graph[i].pos.x;
+		
+		graf[i][1] = graph[i].pos.y;
+		
+		//if node has edge then set graf zeile 2 auf 1
+		for (var z = 0; z < graph.length; z++) {
+		  if (i === z) {has_edge[i][z]=0; continue;}   //not sure if gpu.js supports continue
+		  if (graph[i].hasEdge(graph[z]))
+			has_edge[i][z] = 1;
+		  }
+    }
+
+
+
+
+
 	
   var totalSteps = 0, time = 0;
   function step() {
     var startTime = Date.now();
-    for (var i = 0; i < 1; i++)  //hier Wert i auf zB 10 setzen damit draw nicht jedes mal laeuft
+    for (var i = 0; i < 1; i++){  //hier Wert i auf zB 10 setzen damit draw nicht jedes mal laeuft
       //implementation(graph);
-      forceDirected_gpu(graph);
+	forceDirected_gpu(graf, has_edge)};        //??????graf ist in and out vorher war's graph
     totalSteps += 1;       // und dann steps auch auf 10 setzen
     time += Date.now() - startTime;
-    drawGraph(graph);
+
+
+    //copy graf-array values back to graph-object
+    for (var i = 0; i < graph.length; i++) {
+//      graph[i].pos.x += ret_graf[i][0];
+//      graph[i].pos.y += ret_graf[i][1];
+      graph[i].pos.x += graf[i][0];
+      graph[i].pos.y += graf[i][1];
+    }
+
+
+
+
+
+
+    drawGraph(graph);                  //konvertiere graf back to graph before calling drawGraph
 
     if (totalSteps < 4000)
       requestAnimationFrame(step);
@@ -135,6 +207,7 @@ function runLayout(implementation, graph) {
 	};
 
 //diese Kernel Funktion gibt die Kräfte X und Y zurück
+
     const myGPUfuncXY = gpu.createKernel(function(graf, has_edge){
 	  
 	// for (var i = 0; i < graph.length; i++) {
@@ -193,7 +266,7 @@ function runLayout(implementation, graph) {
 //Ziel: modifie forceDirected_array to make it use
 //      gpu.js
 
-function forceDirected_gpu(graph) {                            //graph is the object representation that will be convertet to the array repr. graf
+function forceDirected_gpu(graf, has_edge) {                            //graph ist nun eigentlich graf, muss es aber noch umschreiben
 
 /*
 	  //initialize an array of the size graph.length^3
@@ -212,55 +285,6 @@ function forceDirected_gpu(graph) {                            //graph is the ob
 
 //     console.log(graph.length);
 
-
-	  //initialize an array for the input values
-	  var graf = [];
-	  for (var a = 0; a < graph.length; a++){
-		graf[a] = [];
-		for (var b = 0; b < 2; b++){
-		  graf[a][b] = 0;
-		}
-	  }
-
-	  
-	  
-	  
-	  //initialize an array for the has edge values
-	  var has_edge = [];
-	  for (var a = 0; a < graph.length; a++){
-		has_edge[a] = [];
-		for (var b = 0; b < graph.length; b++){
-		  has_edge[a][b] = 0;
-		}
-	  }
-
-
-
-	  //initialize an array of the size graph.length^3
-	  var ret_graf = [];
-	  for (var a = 0; a < graph.length; a++){
-		ret_graf[a] = [];
-		for (var b = 0; b < 2; b++){
-		  ret_graf[a][b] = 0;
-		}
-	  }
-	  
-	  
-
-	//copy graph-object values to graf-array
-	for (var i = 0; i < graph.length; i++) {
-		graf[i][0] = graph[i].pos.x;
-		
-		graf[i][1] = graph[i].pos.y;
-		
-		//if node has edge then set graf zeile 2 auf 1
-		for (var z = 0; z < graph.length; z++) {
-		  if (i === z) {has_edge[i][z]=0; continue;}   //not sure if gpu.js supports continue
-		  if (graph[i].hasEdge(graph[z]))
-			has_edge[i][z] = 1;
-		  }
-    }
-
 	
 //    ret_grafX = myGPUfuncX(graf, has_edge);    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //    ret_grafY = myGPUfuncY(graf, has_edge);    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -268,21 +292,19 @@ function forceDirected_gpu(graph) {                            //graph is the ob
     // die neue Funktion grafXY kombiniert die alten, separaten Funktionen X und Y
     ret_grafXY = myGPUfuncXY(graf, has_edge);    //!!!!!die Fkt gibt graphLenth x graphLenth x 2 array zurück
 
-	    
-      for (var i = 0; i < graph.length; i++){
-        for (var j = 0; j < graph.length; j++){
-		ret_graf[i][0] += ret_grafXY[0][j][i]; ret_graf[i][1] += ret_grafXY[1][j][i];  //im Level [0] sind die X-forcs im [1] die Y-forces
-		ret_graf[j][0] -= ret_grafXY[0][j][i]; ret_graf[j][1] -= ret_grafXY[1][j][i];
+
+		//kumuliere die gpu berechneten forces aus ret_grafXY ins aufsummierte ret_graf array
+      for (var i = 0; i < graflength; i++){
+        for (var j = 0; j < graflength; j++){
+//		ret_graf[i][0] += ret_grafXY[0][j][i]; ret_graf[i][1] += ret_grafXY[1][j][i];  //im Level [0] sind die old grafX-forces im [1] die old grafY-forces
+//		ret_graf[j][0] -= ret_grafXY[0][j][i]; ret_graf[j][1] -= ret_grafXY[1][j][i];
+		graf[i][0] += ret_grafXY[0][j][i]; graf[i][1] += ret_grafXY[1][j][i];  //im Level [0] sind die old grafX-forces im [1] die old grafY-forces
+		graf[j][0] -= ret_grafXY[0][j][i]; graf[j][1] -= ret_grafXY[1][j][i];
 		}
       }
 
 
   
-    //copy graf-array values back to graph-object
-    for (var i = 0; i < graph.length; i++) {
-      graph[i].pos.x += ret_graf[i][0];
-      graph[i].pos.y += ret_graf[i][1];
-    }
   //alert("am ende");
 }
 
