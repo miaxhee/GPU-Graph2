@@ -28,7 +28,7 @@ function treeGraph(depth, branches) {
 }
 
 var springLength = 40;    //40
-var springStrength = 0.1;  //0.1
+var springStrength = 100.1;  //0.1
 
 var repulsionStrength = 1500;    //1500
 
@@ -45,7 +45,7 @@ function runLayout(implementation, graph) {
 	alert(graflength)
 
 
-	  //initialize an empty array of the size #knoten * x,y werte for the input values
+	  //initialize an empty array of the size #knoten * 2 (x,y werte) for the input values
 	  var graf = [];
 	  for (var a = 0; a < graph.length; a++){
 		graf[a] = [];
@@ -54,8 +54,6 @@ function runLayout(implementation, graph) {
 		}
 	  }
 
-	  
-	  
 	  
 	  //initialize an empty array #knoten^2 for the has edge values
 	  var has_edge = [];
@@ -69,13 +67,13 @@ function runLayout(implementation, graph) {
 
 
 	  //initialize an empty array for the gpu-return values of the size #knoten * x,y werte for the input values
-	  var ret_graf = [];
-	  for (var a = 0; a < graph.length; a++){
-		ret_graf[a] = [];
-		for (var b = 0; b < 2; b++){
-		  ret_graf[a][b] = 0;
-		}
-	  }
+//	  var ret_graf = [];
+//	  for (var a = 0; a < graph.length; a++){
+//		ret_graf[a] = [];
+//		for (var b = 0; b < 2; b++){
+//		  ret_graf[a][b] = 0;
+//		}
+//	  }
 	  
 	  
 
@@ -102,24 +100,35 @@ function runLayout(implementation, graph) {
   function step() {
     var startTime = Date.now();
     for (var i = 0; i < 1; i++){  //hier Wert i auf zB 10 setzen damit draw nicht jedes mal laeuft
-      //implementation(graph);
-	forceDirected_gpu(graf, has_edge)};        //??????graf ist in and out vorher war's graph
+ 
+      //forceDirected_gpu(graf, has_edge)    //!!!!!ist alt und wird nicht mehr geraucht, die Fkt gibt graphLenth x graphLenth x 2 array zurück
+	
+	  // die neue GPU-Funktion grafXY kombiniert die alten, separaten Funktionen X und Y
+     
+	 ret_grafXY = myGPUfuncXY(graf, has_edge); 
+
+
+	
+		//kumuliere die gpu berechneten forces aus ret_grafXY zurück ins graf-array
+      for (var i = 0; i < graflength; i++){
+        for (var j = 0; j < graflength; j++){
+		graf[i][0] += ret_grafXY[0][j][i]; graf[i][1] += ret_grafXY[1][j][i];  //im Level [0] sind die old grafX-forces im [1] die old grafY-forces
+		graf[j][0] -= ret_grafXY[0][j][i]; graf[j][1] -= ret_grafXY[1][j][i];
+		}
+      }
+	
+	};        //??????graf ist in and out vorher wurde immer über graph umgerechnet
     totalSteps += 1;       // und dann steps auch auf 10 setzen
     time += Date.now() - startTime;
 
 
-    //copy graf-array values back to graph-object
+    //copy graf-array values back to graph-object damit draw_graph funktioniert
     for (var i = 0; i < graph.length; i++) {
 //      graph[i].pos.x += ret_graf[i][0];
 //      graph[i].pos.y += ret_graf[i][1];
       graph[i].pos.x += graf[i][0];
       graph[i].pos.y += graf[i][1];
     }
-
-
-
-
-
 
     drawGraph(graph);                  //konvertiere graf back to graph before calling drawGraph
 
@@ -266,6 +275,7 @@ function runLayout(implementation, graph) {
 //Ziel: modifie forceDirected_array to make it use
 //      gpu.js
 
+//13Feb 18 diese Fkt ist alt und wird nicht mehr aufgerufen, weil ihr Inhalt direkt in die Layout Fkt kopiert ist
 function forceDirected_gpu(graf, has_edge) {                            //graph ist nun eigentlich graf, muss es aber noch umschreiben
 
 /*
@@ -289,10 +299,13 @@ function forceDirected_gpu(graf, has_edge) {                            //graph 
 //    ret_grafX = myGPUfuncX(graf, has_edge);    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //    ret_grafY = myGPUfuncY(graf, has_edge);    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+
+
     // die neue Funktion grafXY kombiniert die alten, separaten Funktionen X und Y
     ret_grafXY = myGPUfuncXY(graf, has_edge);    //!!!!!die Fkt gibt graphLenth x graphLenth x 2 array zurück
 
 
+	
 		//kumuliere die gpu berechneten forces aus ret_grafXY ins aufsummierte ret_graf array
       for (var i = 0; i < graflength; i++){
         for (var j = 0; j < graflength; j++){
