@@ -32,7 +32,7 @@ var springStrength = 100.1;  //0.1
 
 var repulsionStrength = 1500;    //1500
 
-var graflength = 400  //1500               //hier muss man die Anzahl Knoten einstellen
+var graflength = 400 //1500               //hier muss man die Anzahl Knoten einstellen
 
 
 function runLayout(implementation, graph) {         
@@ -66,15 +66,15 @@ function runLayout(implementation, graph) {
 
 
 
-	  //initialize an empty array for the gpu-return values of the size #knoten * x,y werte for the input values
-//	  var ret_graf = [];
-//	  for (var a = 0; a < graph.length; a++){
-//		ret_graf[a] = [];
-//		for (var b = 0; b < 2; b++){
-//		  ret_graf[a][b] = 0;
-//		}
-//	  }
-	  
+/*	  //initialize an empty array for the gpu-return values of the size #knoten * x,y werte for the input values
+	  var ret_graf = [];
+	  for (var a = 0; a < graph.length; a++){
+		ret_graf[a] = [];
+		for (var b = 0; b < 2; b++){
+		  ret_graf[a][b] = 0;
+		}
+	  }
+*/	  
 	  
 
 	//copy graph-object values to graf-array
@@ -107,15 +107,20 @@ function runLayout(implementation, graph) {
      
 	 ret_grafXY = myGPUfuncXY(graf, has_edge); 
 
+	  //die GPU Funktion merged die resultate vom ret_grafXY zurück ins graf array
+	 
+     graf = myGPUfuncReturn(graf, ret_grafXY, graflength);  //die kernel fkt merged die forces aus ret_grafXY zurück ins graf array
 
 	
-		//kumuliere die gpu berechneten forces aus ret_grafXY zurück ins graf-array
+/*		//kumuliere die gpu berechneten forces aus ret_grafXY zurück ins graf-array per CPU ohne kernel fkt
       for (var i = 0; i < graflength; i++){
         for (var j = 0; j < graflength; j++){
 		graf[i][0] += ret_grafXY[0][j][i]; graf[i][1] += ret_grafXY[1][j][i];  //im Level [0] sind die old grafX-forces im [1] die old grafY-forces
 		graf[j][0] -= ret_grafXY[0][j][i]; graf[j][1] -= ret_grafXY[1][j][i];
 		}
       }
+*/ 
+
 	
 	};        //??????graf ist in and out vorher wurde immer über graph umgerechnet
     totalSteps += 1;       // und dann steps auch auf 10 setzen
@@ -124,15 +129,13 @@ function runLayout(implementation, graph) {
 
     //copy graf-array values back to graph-object damit draw_graph funktioniert
     for (var i = 0; i < graph.length; i++) {
-//      graph[i].pos.x += ret_graf[i][0];
-//      graph[i].pos.y += ret_graf[i][1];
       graph[i].pos.x += graf[i][0];
       graph[i].pos.y += graf[i][1];
     }
 
-    drawGraph(graph);                  //konvertiere graf back to graph before calling drawGraph
+    drawGraph(graph);
 
-    if (totalSteps < 4000)
+    if (totalSteps < 6000)
       requestAnimationFrame(step);
     else
 	  alert("finished");	
@@ -144,67 +147,6 @@ function runLayout(implementation, graph) {
 
     const gpu = new GPU();  // ????????????????????????????????????
 
-	
-/*				function createFuncX(mode) {
-				var opt = {
-					dimensions: [341, 341],
-					mode: mode
-				};
-
-				return gpu.createKernel(function(graf){
-						// for (var i = 0; i < graph.length; i++) {
-						if (this.thread.x == this.thread.y) return 0;
-						var nodeX = graf[this.thread.x][0][0];  //i
-						var nodeY = graf[this.thread.x][1][0];
-						//var nodeZ = graf[i][2][0];
-						//for (var j = i + 1; j < graph.length; j++) {
-						var otherX = graf[this.thread.y][0][0];  //j
-						var otherY = graf[this.thread.y][1][0];  //j
-						var apartX = otherX - nodeX;
-						var apartY = otherY - nodeY;
-						var distance = Math.max(1, Math.sqrt(apartX * apartX + apartY * apartY));
-						var forceSize = -1500 / (distance * distance);
-						if (graf[this.thread.x][2][this.thread.y] == 1)    //(node.hasEdge(other))    ?????????????????????????????????????????????
-							forceSize += (distance - 40) * 0.1;
-
-						var forceX = apartX * forceSize / distance;
-						//var forceY = apartY * forceSize / distance;
-					return forceX; //????????????????????''
-				}, opt);
-			}
-
-
-			function createFuncY(mode) {
-				var opt = {
-					dimensions: [341, 341],
-					mode: mode
-				};
-
-				return gpu.createKernel(function(graf){
-						// for (var i = 0; i < graph.length; i++) {
-						if (this.thread.x == this.thread.y) return 0;
-						var nodeX = graf[this.thread.x][0][0];  //i
-						var nodeY = graf[this.thread.x][1][0];
-						//var nodeZ = graf[i][2][0];
-						//for (var j = i + 1; j < graph.length; j++) {
-						var otherX = graf[this.thread.y][0][0];  //j
-						var otherY = graf[this.thread.y][1][0];  //j
-						var apartX = otherX - nodeX;
-						var apartY = otherY - nodeY;
-						var distance = Math.max(1, Math.sqrt(apartX * apartX + apartY * apartY));
-						var forceSize = -1500 / (distance * distance);
-						if (graf[this.thread.x][2][this.thread.y] == 1)    //(node.hasEdge(other))    ?????????????????????????????????????????????
-							forceSize += (distance - 40) * 0.1;
-
-						//var forceX = apartX * forceSize / distance;
-						var forceY = apartY * forceSize / distance;
-					return forceY; //????????????????????''
-				}, opt);
-			}
-
-    var myGPUfuncX = createFuncX('gpu');
-	var myGPUfuncY = createFuncY('gpu');
-*/
 
 	
 	const opt = {
@@ -213,6 +155,11 @@ function runLayout(implementation, graph) {
 		//old gpu.js syntax was ...
 		//dimensions:  [graflength, graflength], //[341, 341], //[121, 121], //[85, 85] ,  //[graf_length,graf_length,graf_length],   // ???? define graph.length  ???????????
 		//mode: 'gpu'    // or cpu
+	};
+
+	const opt2 = {
+		output: [2, graflength],    //im 2x2 array auf layer 0 sind die X-forces im layer 1 die Y-forces
+		mode: 'gpu'
 	};
 
 //diese Kernel Funktion gibt die Kräfte X und Y zurück
@@ -244,6 +191,22 @@ function runLayout(implementation, graph) {
 			}
     	return forceXY; // old was X ????????????????????''
     }, opt);
+
+//diese Kernel Funktion merged die Kräfte aus forceXY ins graf array
+
+    const myGPUfuncReturn = gpu.createKernel(function(graf, ret_grafXY, graflength){
+
+		//kumuliere die gpu berechneten forces aus ret_grafXY zurück ins graf-array
+		//thread-y=graflength thread-x=2
+		
+		var graff = graf[this.thread.y][this.thread.x];
+		for (var j = 0; j < graflength; j++) {
+			graff += ret_grafXY[this.thread.x][j][this.thread.y];
+			graff -= ret_grafXY[this.thread.x][this.thread.y][j];
+		}
+		return graff;
+
+    }, opt2);
 
 //wird wegen XY das beide kobinert nicht mehr gebraucht
 //    const myGPUfuncY = gpu.createKernel(function(graf, has_edge){
@@ -304,8 +267,9 @@ function forceDirected_gpu(graf, has_edge) {                            //graph 
     // die neue Funktion grafXY kombiniert die alten, separaten Funktionen X und Y
     ret_grafXY = myGPUfuncXY(graf, has_edge);    //!!!!!die Fkt gibt graphLenth x graphLenth x 2 array zurück
 
+	graf = myGPUfuncXY(ret_grafXY);  //die kernel fkt merged die forces aus ret_grafXY zurück ins graf array
 
-	
+/*	
 		//kumuliere die gpu berechneten forces aus ret_grafXY ins aufsummierte ret_graf array
       for (var i = 0; i < graflength; i++){
         for (var j = 0; j < graflength; j++){
@@ -315,7 +279,7 @@ function forceDirected_gpu(graf, has_edge) {                            //graph 
 		graf[j][0] -= ret_grafXY[0][j][i]; graf[j][1] -= ret_grafXY[1][j][i];
 		}
       }
-
+*/
 
   
   //alert("am ende");
